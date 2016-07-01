@@ -32,7 +32,7 @@
         NSLog(@"设备不支持healthKit");
     }
     
-   [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"prefs:root=Privacy&path=HEALTH/aaaa"]];
+//   [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"prefs:root=Privacy&path=HEALTH/aaaa"]];
     
     self.healthStore = [[HKHealthStore alloc]init];
     
@@ -57,31 +57,21 @@
         if (success)
         {
                         NSLog(@"获取权限成功");
-            
-//            [self readStep];
-//            [self readSleep];
-//            [self share];
-//            [self shareSleep];
-//            [self collect];
-//            [self shareHeartRate];
-//            [self readHeartRate];
+            [self shareHeartRate];
 //            [self shareRespiratory];
+//            [self shareSleep];
+//           
+            
+            
+//            [self readSleep];
+            [self readHeartRate];
 //            [self readRespiratory];
-//            [self queryToday];
         }
         else
         {
             NSLog(@"%@",error);
         }
     }];
-//    [self.healthStore handleAuthorizationForExtensionWithCompletion:^(BOOL success, NSError * _Nullable error) {
-//        if (success) {
-//             NSLog(@">>>>>>>>>>>>>获取权限成功");
-//        }else{
-//            
-//        }
-//    }];
-
 
 }
 /*
@@ -104,11 +94,7 @@
  }
 
  */
-#pragma mark - 监听
-- (void)observer
-{
-    
-}
+
 #pragma mark - 读取sleep
 -(void)readSleep
 {
@@ -120,46 +106,13 @@
     }];
      [self.healthStore executeQuery:sleepSample];
 }
-#pragma mark - 读取step
--(void)readStep
-{
-    //查询采样信息
-    HKSampleType *sampleType = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
-    
-
-    NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:HKSampleSortIdentifierEndDate ascending:NO];
-    
-    /*limit:HKObjectQueryNoLimit:表示没有查询限制 即 读出所有stepcount
-     */
-    HKSampleQuery *sampleQuery = [[HKSampleQuery alloc] initWithSampleType:sampleType predicate:nil limit:20 sortDescriptors:@[sortDescriptor] resultsHandler:^(HKSampleQuery * _Nonnull query, NSArray<__kindof HKSample *> * _Nullable results, NSError * _Nullable error) {
-        //打印查询结果
-        NSLog(@"resultCount = %ld result = %@",results.count,results);
-        
-        //把结果装换成字符串类型
-        HKQuantitySample *result = results[0];
-        HKQuantity *quantity = result.quantity;
-        NSString *stepStr = (NSString *)quantity;
-
-        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-            
-            //查询是在多线程中进行的，如果要对UI进行刷新，要回到主线程中
-            NSLog(@"最新步数：%@",stepStr);
-            
-
-        }];
-        
-    }];
-    
-    //执行查询
-    [self.healthStore executeQuery:sampleQuery];
-   
-}
 #pragma mark - 读取呼吸速率
 -(void)readRespiratory
 {
     HKSampleType *respiratory = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierRespiratoryRate];
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:HKSampleSortIdentifierEndDate ascending:NO];
     HKSampleQuery *sampleQuery = [[HKSampleQuery alloc]initWithSampleType:respiratory predicate:nil limit:20 sortDescriptors:@[sortDescriptor] resultsHandler:^(HKSampleQuery * _Nonnull query, NSArray<__kindof HKSample *> * _Nullable results, NSError * _Nullable error) {
+        
          NSLog(@"resultCount = %ld result = %@",results.count,results);
     }];
     [self.healthStore executeQuery:sampleQuery];
@@ -169,7 +122,7 @@
 {
     HKQuantityType *respiratory = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierRespiratoryRate];
     HKQuantity *respiratoryCount = [HKQuantity quantityWithUnit:[[HKUnit countUnit] unitDividedByUnit:[HKUnit minuteUnit]] doubleValue:26];
-    HKQuantitySample *sample = [HKQuantitySample quantitySampleWithType:respiratory quantity:respiratoryCount startDate:[[NSDate date] dateByAddingTimeInterval:- 8*60*60 ] endDate:[[NSDate date] dateByAddingTimeInterval:-6*60*60 ]];
+    HKQuantitySample *sample = [HKQuantitySample quantitySampleWithType:respiratory quantity:respiratoryCount startDate:[[NSDate date] dateByAddingTimeInterval:- 8*60*60 ] endDate:[[NSDate date] dateByAddingTimeInterval:-1*60*60 ]];
     [self.healthStore saveObject:sample withCompletion:^(BOOL success, NSError * _Nullable error) {
         if (success) {
             NSLog(@"respiratory>>>>>>>");
@@ -190,25 +143,39 @@
         NSLog(@"resultCount = %ld result = %@",results.count,results);
 //遍历的时候选择性删除   for (HKObject *object in results)
                //        全部删除
-       [self.healthStore deleteObjects:results withCompletion:^(BOOL success, NSError * _Nullable error) {
-           if (success) {
-               NSLog(@"delete>>>>>>>>>>");
-           }
-       }];
+//       [self.healthStore deleteObjects:results withCompletion:^(BOOL success, NSError * _Nullable error) {
+//           if (success) {
+//               NSLog(@"delete>>>>>>>>>>");
+//           }
+//       }];
     }];
     [self.healthStore executeQuery:sampleQuery];
 }
 #pragma mark - 写入心率
 - (void)shareHeartRate
 {
+    
+    NSString *str = @"2016/06/20 20:54:00";
+     NSString *str1 = @"2016/06/20 20:55:00";
+     NSString *str2 = @"2016/06/20 20:56:00";
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    
+    [dateFormatter setDateFormat: @"yyyy-MM-dd HH:mm:ss"];
+    
+    NSDate *date= [dateFormatter dateFromString:str];
+    NSDate *date1= [dateFormatter dateFromString:str1];
+    NSDate *date2= [dateFormatter dateFromString:str2];
     HKQuantityType *heartRate = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierHeartRate];
    
     HKQuantity *heartRates = [HKQuantity quantityWithUnit:[[HKUnit countUnit] unitDividedByUnit:[HKUnit minuteUnit]] doubleValue:68];
     
-    HKQuantitySample *heartSample = [HKQuantitySample quantitySampleWithType:heartRate quantity:heartRates startDate:[[NSDate date] dateByAddingTimeInterval:- 6*60*60 ] endDate:[[NSDate date] dateByAddingTimeInterval:-5*60*60 ]];
+//    HKQuantitySample *heartSample = [HKQuantitySample quantitySampleWithType:heartRate quantity:heartRates startDate:[[NSDate date] dateByAddingTimeInterval:- 6*60*60 ] endDate:[[NSDate date] dateByAddingTimeInterval:-5*60*60 ]];
+    HKQuantitySample *heartSample = [HKQuantitySample quantitySampleWithType:heartRate quantity:heartRates startDate:date endDate:date1];
+    
     [self.healthStore saveObject:heartSample withCompletion:^(BOOL success, NSError * _Nullable error) {
         if (success) {
-            NSLog(@"heartRate>>>>>>>>>>>");
+            
+            NSLog(@"heartRate>>>startDate%@>>>>endDate%@>>>>",heartSample.startDate,heartSample.endDate);
         }
         else
         {
@@ -217,23 +184,7 @@
     }];
     
 }
-#pragma mark - 写入step
-- (void)share
-{
-    HKQuantityType *myStep = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
-    
-    HKQuantity *newCount = [HKQuantity quantityWithUnit:[HKUnit countUnit] doubleValue:300.0];
-    HKQuantitySample *stepSample = [HKQuantitySample quantitySampleWithType:myStep quantity:newCount startDate:[[NSDate date] dateByAddingTimeInterval:- 4*60*60 ] endDate:[[NSDate date] dateByAddingTimeInterval:-3*60*60 ]];
-    [self.healthStore saveObject:stepSample withCompletion:^(BOOL success, NSError * _Nullable error) {
-        if (success) {
-            NSLog(@">>>>>>>>>>>");
-        }
-        else
-        {
-//            NSLog(@"&@",error);
-        }
-    }];
-}
+
 #pragma mark - 写入sleep
 - (void)shareSleep
 {
